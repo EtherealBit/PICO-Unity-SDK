@@ -277,7 +277,8 @@ namespace ByteDance.PICO.XR
                     case PxrSemanticLabel.Chair:
                         return PlaneClassification.Seat;
                     default:
-                        throw new ArgumentOutOfRangeException(nameof(label), label, null);
+                        // Labels newer than this SDK (e.g. 25 from current PICO OS) must not drop the whole plane batch.
+                        return PlaneClassification.None;
                 }
             }
 #endif
@@ -321,7 +322,8 @@ namespace ByteDance.PICO.XR
                     case PxrSemanticLabel.WallArt:
                         return PlaneClassifications.WallArt;
                     default:
-                        throw new ArgumentOutOfRangeException(nameof(label), label, null);
+                        // Labels newer than this SDK (e.g. 25 from current PICO OS) must not drop the whole plane batch.
+                        return PlaneClassifications.Other;
                 }
             }
 #endif
@@ -339,7 +341,7 @@ namespace ByteDance.PICO.XR
                     case PxrPlaneOrientation.Arbitrary:
                         return PlaneAlignment.NotAxisAligned;
                     default:
-                        throw new ArgumentOutOfRangeException(nameof(orientationMode), orientationMode, null);
+                        return PlaneAlignment.None;
                 }
             }
             
