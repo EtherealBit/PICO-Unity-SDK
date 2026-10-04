@@ -58,7 +58,9 @@ namespace ByteDance.PICO.XR
                     Vector2[] vectors2 = planeDatas[i].vertices.Select(v => new Vector2(v.x, v.y)).ToArray();
                     Vector2[] reversedVectors = vectors2.Reverse().ToArray();
                     var planeVertices = new NativeArray<Vector2>(reversedVectors, Allocator.Persistent);
-                    
+
+                    if (trackableToPlaneVertices.TryGetValue(trackabledId, out var previousVertices) && previousVertices.IsCreated)
+                        previousVertices.Dispose();
                     trackableToPlaneVertices[trackabledId] = planeVertices;
                     switch (planeDatas[i].state)
                     {
@@ -108,17 +110,37 @@ namespace ByteDance.PICO.XR
                     return;
                 }
 
-                if (!IsConvexPolygon(sourceBoundary.ToArray()))
+                // AR Foundation's ARPlaneMeshGenerator (ear clipping) loops forever on a boundary with
+                // counter-clockwise winding, duplicate/collinear points or zero area, because no vertex
+                // ever qualifies as an ear. Always hand it a clockwise convex hull (which drops duplicate
+                // and collinear points), or nothing if the plane is degenerate.
+                var hull = ConvexHull(sourceBoundary.ToArray());
+                var signedArea = SignedArea(hull);
+                if (hull.Count < 3 || Mathf.Abs(signedArea) < 1e-6f)
                 {
-                    var newBoundary = ConvexHull(sourceBoundary.ToArray()).ToArray();
-                    CreateOrResizeNativeArrayIfNecessary(newBoundary.Length, allocator, ref boundary);
-                    boundary.CopyFrom(newBoundary);
+                    CreateOrResizeNativeArrayIfNecessary(0, allocator, ref boundary);
+                    return;
                 }
-                else
+
+                if (signedArea > 0)
+                    hull.Reverse();
+
+                CreateOrResizeNativeArrayIfNecessary(hull.Count, allocator, ref boundary);
+                boundary.CopyFrom(hull.ToArray());
+            }
+
+            static float SignedArea(List<Vector2> polygon)
+            {
+                // Shoelace formula: positive for counter-clockwise, negative for clockwise.
+                float area = 0;
+                for (int i = 0; i < polygon.Count; i++)
                 {
-                    CreateOrResizeNativeArrayIfNecessary(sourceBoundary.Length, allocator, ref boundary);
-                    NativeArray<Vector2>.Copy(sourceBoundary, boundary);
+                    var a = polygon[i];
+                    var b = polygon[(i + 1) % polygon.Count];
+                    area += a.x * b.y - b.x * a.y;
                 }
+
+                return area * 0.5f;
             }
             
             bool IsConvexPolygon(Vector2[] vertices)
