@@ -51,17 +51,42 @@ namespace ByteDance.PICO.XR
                 {
                     var bytes = planeDatas[i].uuid.ToByteArray();
                     var trackabledId = new TrackableId(BitConverter.ToUInt64(bytes, 0), BitConverter.ToUInt64(bytes, 8));
+
+                    // Unchanged planes need no notification. Removed planes come from QueryPlaneAnchorAsync with
+                    // only uuid/state set (vertices == null); reading them threw and dropped the rest of the batch.
+                    if (planeDatas[i].state == MeshChangeState.Unchanged)
+                        continue;
+
+                    if (planeDatas[i].state == MeshChangeState.Removed)
+                    {
+                        if (trackableToPlaneVertices.TryGetValue(trackabledId, out var removedVertices))
+                        {
+                            if (removedVertices.IsCreated)
+                                removedVertices.Dispose();
+                            trackableToPlaneVertices.Remove(trackabledId);
+                        }
+
+                        removedPlanes.Add(new BoundedPlane(trackabledId, TrackableId.invalidId, Pose.identity, Vector2.zero,
+                            Vector2.zero, PlaneAlignment.None, TrackingState.None, IntPtr.Zero, default));
+                        continue;
+                    }
+
                     var boundedPlane = new BoundedPlane(trackabledId, TrackableId.invalidId,
                         new Pose(planeDatas[i].position, planeDatas[i].rotation), Vector2.zero, planeDatas[i].box2D.extent.ToVector2(),
                         ConvertPxrPlaneOrientationToPlaneAlignment(planeDatas[i].orientationMode), TrackingState.Tracking, IntPtr.Zero, ConvertPxrSemanticToPlaneClassifications(planeDatas[i].label));
-                    
-                    Vector2[] vectors2 = planeDatas[i].vertices.Select(v => new Vector2(v.x, v.y)).ToArray();
-                    Vector2[] reversedVectors = vectors2.Reverse().ToArray();
-                    var planeVertices = new NativeArray<Vector2>(reversedVectors, Allocator.Persistent);
 
-                    if (trackableToPlaneVertices.TryGetValue(trackabledId, out var previousVertices) && previousVertices.IsCreated)
-                        previousVertices.Dispose();
-                    trackableToPlaneVertices[trackabledId] = planeVertices;
+                    // Keep the previous boundary if the runtime returned no vertices for this plane.
+                    if (planeDatas[i].vertices != null)
+                    {
+                        Vector2[] vectors2 = planeDatas[i].vertices.Select(v => new Vector2(v.x, v.y)).ToArray();
+                        Vector2[] reversedVectors = vectors2.Reverse().ToArray();
+                        var planeVertices = new NativeArray<Vector2>(reversedVectors, Allocator.Persistent);
+
+                        if (trackableToPlaneVertices.TryGetValue(trackabledId, out var previousVertices) && previousVertices.IsCreated)
+                            previousVertices.Dispose();
+                        trackableToPlaneVertices[trackabledId] = planeVertices;
+                    }
+
                     switch (planeDatas[i].state)
                     {
                         case MeshChangeState.Added:
@@ -72,11 +97,6 @@ namespace ByteDance.PICO.XR
                         case MeshChangeState.Updated:
                         {
                             updatedPlanes.Add(boundedPlane);
-                        }
-                            break;
-                        case MeshChangeState.Removed:
-                        {
-                            removedPlanes.Add(boundedPlane);
                         }
                             break;
                     }
