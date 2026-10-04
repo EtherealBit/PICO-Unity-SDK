@@ -67,7 +67,8 @@ namespace ByteDance.PICO.XR
                         }
 
                         removedPlanes.Add(new BoundedPlane(trackabledId, TrackableId.invalidId, Pose.identity, Vector2.zero,
-                            Vector2.zero, PlaneAlignment.None, TrackingState.None, IntPtr.Zero, default));
+                            Vector2.zero, PlaneAlignment.None, TrackingState.None, IntPtr.Zero,
+                            ConvertPxrSemanticToPlaneClassifications(PxrSemanticLabel.Unknown)));
                         continue;
                     }
 
