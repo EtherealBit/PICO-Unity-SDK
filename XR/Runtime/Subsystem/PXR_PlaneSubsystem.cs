@@ -111,14 +111,8 @@ namespace ByteDance.PICO.XR
                 if (!IsConvexPolygon(sourceBoundary.ToArray()))
                 {
                     var newBoundary = ConvexHull(sourceBoundary.ToArray()).ToArray();
-                    if (boundary.IsCreated)
-                    {
-                        if (boundary.Length != newBoundary.Length)
-                        {
-                            boundary.Dispose();
-                            boundary = new NativeArray<Vector2>(newBoundary, allocator);
-                        }
-                    }
+                    CreateOrResizeNativeArrayIfNecessary(newBoundary.Length, allocator, ref boundary);
+                    boundary.CopyFrom(newBoundary);
                 }
                 else
                 {

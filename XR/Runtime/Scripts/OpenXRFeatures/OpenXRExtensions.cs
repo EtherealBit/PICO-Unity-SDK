@@ -178,8 +178,29 @@ namespace ByteDance.PICO.OpenXR
                         }
                     }
 
+                    if (providerHandle == PXR_Plugin.MixedReality.UPxr_GetSenseDataProviderHandle(PxrSenseDataProviderType.PlaneDetection))
+                    {
+                        if (!isPlaneQueryRunning)
+                        {
+                            QueryPlaneAnchor();
+                        }
+                    }
+
                     break;
                 }
+            }
+        }
+
+        static bool isPlaneQueryRunning = false;
+
+        static async void QueryPlaneAnchor()
+        {
+            isPlaneQueryRunning = true;
+            var (result, planeDatas) = await PXR_MixedReality.QueryPlaneAnchorAsync();
+            isPlaneQueryRunning = false;
+            if (result == PxrResult.SUCCESS)
+            {
+                PXR_Manager.RaisePlaneDetectionDataUpdated(planeDatas);
             }
         }
 

@@ -168,6 +168,12 @@ namespace ByteDance.PICO.XR
         public static event Action<List<PxrSpatialMeshInfo>> SpatialMeshDataUpdated;
         public static event Action SceneAnchorDataUpdated;
         public static event Action<List<PxrPlaneData>> PlaneDetectionDataUpdated;
+
+        // Lets the OpenXR event path (OpenXRExtensions), which doesn't go through PollEvent, deliver plane updates.
+        internal static void RaisePlaneDetectionDataUpdated(List<PxrPlaneData> planeDatas)
+        {
+            PlaneDetectionDataUpdated?.Invoke(planeDatas);
+        }
         public static event Action LightEstimationUpdated;
         public static event Action SemiAutoCaptureDataUpdated;
         public static event Action DynamicObjectDataUpdated;
