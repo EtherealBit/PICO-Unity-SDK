@@ -25,6 +25,11 @@ namespace ByteDance.PICO.XR
         {
             XrSessionState m_SessionState;
 
+            // Without this override AR Foundation's default is SessionAvailability.None, which makes ARSession
+            // report Unsupported and disable itself (and ARPlaneMeshVisualizer then hides every plane).
+            public override Promise<SessionAvailability> GetAvailabilityAsync() =>
+                Promise<SessionAvailability>.CreateResolvedPromise(SessionAvailability.Supported | SessionAvailability.Installed);
+
             /// <inheritdoc/>
             public override TrackingState trackingState
             {

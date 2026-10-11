@@ -268,6 +268,10 @@ namespace ByteDance.PICO.OpenXR
         protected override void OnSessionStateChange(int oldState, int newState)
         {
             Debug.Log($"[PICOOpenXRExtensions] OnSessionStateChange: {oldState} -> {newState}");
+#if AR_FOUNDATION_5 || AR_FOUNDATION_6
+            // Only PXR_Loader forwarded session state; under OpenXR the session subsystem stayed at Unknown.
+            PXR_SessionSubsystem.instance?.OnSessionStateChange((XrSessionState)newState);
+#endif
         }
 
 
